@@ -26,7 +26,7 @@ IH_35 <- road_segments %>%
 
 ggplot(IH_35) +
   geom_sf(color = "black") + 
-  labs(title = "Travis Count & IH 35",
+  labs(title = "Travis County & IH 35",
        caption = "sources: TXDOT & Travis County open data portals") +
   theme_void() +
   theme(plot.background = element_rect(fill = "blanchedalmond"))
