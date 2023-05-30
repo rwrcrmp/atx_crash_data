@@ -3,4 +3,4 @@ Repository for Austin crash data and related code focused on IH35 collision mode
 
 ![Fatal Crashes](images/fatalities.png "fatalities")
 
-![IH 35](images/IH_35.png "IH 35")
+![IH 35](images/travis_hex.png "IH 35")

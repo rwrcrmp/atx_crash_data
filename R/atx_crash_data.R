@@ -10,7 +10,7 @@ atx_crash_raw <- read.socrata(url)
 
 write_csv(atx_crash_raw, "data/atx_crash_raw.csv")
 
-atx_crash_raw <- read_csv("dat/atx_crash_raw.csv")
+atx_crash_raw <- read_csv("data/atx_crash_raw.csv")
 
 # take a look at rpt_street_name
 street_names <- levels(factor(atx_crash_raw$rpt_street_name))
@@ -29,9 +29,9 @@ atx_crash_coords <- atx_crash_raw %>%
   select(latitude, longitude) %>% 
   drop_na()
 
-tax_crash_shp <- st_as_sf(atx_crash_coords, coords = c("longitude", "latitude"), crs = st_crs(travis_boundary))
+atx_crash_shp <- st_as_sf(atx_crash_coords, coords = c("longitude", "latitude"), crs = st_crs(travis_boundary))
 
-tax_crash_shp %>% 
+atx_crash_shp %>% 
   ggplot() +
   geom_sf(color = "firebrick", 
           size = 1,
@@ -41,3 +41,10 @@ tax_crash_shp %>%
        caption = "source: Austin Open Data Portal") +
   theme_void() +
   theme(plot.background = element_rect(fill = "blanchedalmond"))
+
+# Merge with grid ---------------------------------------------------------
+
+test <- st_join(atx_crash_shp, st_as_sf(travis_grid), join = st_within)
+
+ggplot() +
+  geom_sf(data = test)

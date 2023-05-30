@@ -15,3 +15,9 @@ https://data.austintexas.gov/resource/y2wy-tgr5.json
 TXDOT roadway inventory:
 
 https://www.txdot.gov/data-maps/roadway-inventory.html
+
+TXDOT roadway inventory API:
+
+https://gis-txdot.opendata.arcgis.com/datasets/TXDOT::txdot-roadway-inventory/explore
+
+
