@@ -28,12 +28,18 @@ IH_35 <- road_segments %>%
   dplyr::filter(prefix_typ == "IH")
 
 # identify hexes that contain highway
-IH_35_hex <- travis_grid[IH_35, op = st_intersects]
-IH_35_hex$y <- T
+travis_grid$y <- as.character(st_contains_properly(travis_grid, IH_35))
+travis_grid$y <- ifelse(travis_grid$y != "integer(0)", T, F)
 
-travis_grid <- travis_grid %>%
-  st_join(IH_35_hex) %>% 
-  mutate(y = if_else(!is.na(y), y, F))
+# for some reason, this method produce a region not a footprint
+# using the new method above with st_intersects generates the same thing
+# as using st_contains_properly
+# IH_35_hex <- travis_grid[IH_35, op = st_intersects]
+# IH_35_hex$y <- T
+# 
+# travis_grid <- travis_grid %>%
+#   st_join(IH_35_hex) %>% 
+#   mutate(y = if_else(!is.na(y), y, F))
 
 # Map ---------------------------------------------------------------------
 
