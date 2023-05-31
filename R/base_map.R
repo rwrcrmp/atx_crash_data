@@ -31,7 +31,7 @@ IH_35 <- road_segments %>%
 travis_grid$y <- as.character(st_intersects(travis_grid, IH_35))
 travis_grid$y <- ifelse(travis_grid$y != "integer(0)", T, F)
 
-# for some reason, this method produce a region not a footprint
+# for some reason, this method produces a regional area not a footprint
 # IH_35_hex <- travis_grid[IH_35, op = st_intersects]
 # IH_35_hex$y <- T
 # 
@@ -41,11 +41,15 @@ travis_grid$y <- ifelse(travis_grid$y != "integer(0)", T, F)
 
 # Map ---------------------------------------------------------------------
 
+custom_palette <- c("#d8b365", "#5ab4ac")
+
+names(custom_palette) <- levels(travis_grid$y)
+
 ggplot() +
   geom_sf(data = travis_grid, aes(fill = y)) +
   labs(title = "IH 35 through Travis County",
        subtitle = "Blue hexes intersect with IH 35 footprint",
        caption = "sources: Travis County & City of Austin Open Data Portals") +
+  scale_fill_manual(values = custom_palette) +
   theme_void() +
-  theme(legend.position = "none",
-        panel.background = element_rect(fill = "blanchedalmond"))
+  theme(legend.position = "none")

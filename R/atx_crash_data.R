@@ -39,12 +39,4 @@ atx_crash_shp %>%
   labs(title = "Fatal Crashes in Austin, TX",
        subtitle = "2018-2023",
        caption = "source: Austin Open Data Portal") +
-  theme_void() +
-  theme(plot.background = element_rect(fill = "blanchedalmond"))
-
-# Merge with grid ---------------------------------------------------------
-
-test <- st_join(atx_crash_shp, st_as_sf(travis_grid), join = st_within)
-
-ggplot() +
-  geom_sf(data = test)
+  theme_void()
