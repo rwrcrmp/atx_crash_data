@@ -28,12 +28,10 @@ IH_35 <- road_segments %>%
   dplyr::filter(prefix_typ == "IH")
 
 # identify hexes that contain highway
-travis_grid$y <- as.character(st_contains_properly(travis_grid, IH_35))
+travis_grid$y <- as.character(st_intersects(travis_grid, IH_35))
 travis_grid$y <- ifelse(travis_grid$y != "integer(0)", T, F)
 
 # for some reason, this method produce a region not a footprint
-# using the new method above with st_intersects generates the same thing
-# as using st_contains_properly
 # IH_35_hex <- travis_grid[IH_35, op = st_intersects]
 # IH_35_hex$y <- T
 # 
@@ -45,9 +43,9 @@ travis_grid$y <- ifelse(travis_grid$y != "integer(0)", T, F)
 
 ggplot() +
   geom_sf(data = travis_grid, aes(fill = y)) +
-  labs(title = "IH 35 area in Travis County",
+  labs(title = "IH 35 through Travis County",
        subtitle = "Blue hexes intersect with IH 35 footprint",
-       caption = "sources: Travis County & City of Austin \nOpen Data Portals") +
+       caption = "sources: Travis County & City of Austin Open Data Portals") +
   theme_void() +
   theme(legend.position = "none",
         panel.background = element_rect(fill = "blanchedalmond"))
