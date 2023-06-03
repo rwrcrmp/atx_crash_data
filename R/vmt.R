@@ -1,32 +1,43 @@
 library(tidyverse)
 library(readxl)
+library(sf)
 
 
 # xslx source -------------------------------------------------------------
 
-path <- "data/data-table.xlsx"
+### USE THIS METHOD FOR MULTIPLE TABLES ###
 
-sheet_names <- c("G1 On-System CL Miles Route",
-                 "G2 On-System Lane Miles Route",
-                 "G3 On-System Truck DVMT Route",
-                 "G4 On-System Total DVMT Route")
-
-vmt <- lapply(sheet_names, function(x){
-  read_excel(path, sheet = x)
-})
-
-names(vmt) <- strsplit(sheet_names, ",")
-
-list2env(vmt, envir = .GlobalEnv)
+# path <- "data/data-table.xlsx"
+# 
+# sheet_names <- c("G1 On-System CL Miles Route",
+#                  "G2 On-System Lane Miles Route",
+#                  "G3 On-System Truck DVMT Route",
+#                  "G4 On-System Total DVMT Route")
+# 
+# vmt <- lapply(sheet_names, function(x){
+#   read_excel(path, sheet = x)
+# })
+# 
+# names(vmt) <- strsplit(sheet_names, ",")
+# 
+# list2env(vmt, envir = .GlobalEnv)
+#
+### USE THIS METHOD FOR ONE TABLE ###
 
 vmt <- as.data.frame(read_xlsx("data/data-table.xlsx", 
                      sheet = "G4 On-System Total DVMT Route"))
 
+#pull column names from row 2
 names(vmt) <- as.vector(vmt[2,])
 
+# remove rows 1 & 2
 vmt <- vmt[-(1:2),]
 
+# extract base variables
 vmt_base <- vmt[,(1:4)]
+  
+# build top variables
+# there's got to be a better way to iterate over this
 
 vmt_2018 <- cbind(vmt_base, vmt[,(5:7)]) %>% 
   mutate(year = 2018) %>% 
@@ -52,9 +63,9 @@ vmt_long <- rbind(vmt_2018, vmt_2019, vmt_2020, vmt_2021) %>%
          mainlines = `Mainlanes`,
          frontage = `Frontage`)
 
-travis_county <- vmt_long %>% 
-  filter(county_code == "227")
-
+# isolate Austin District
+atx_district <- vmt_long %>% 
+  filter(dist_name == "Austin")
 
 # api source --------------------------------------------------------------
 
@@ -70,33 +81,34 @@ txdot_roadway_opendata <- read_csv("data/TxDOT_Roadway_Inventory.csv")
 # ADT_CUR - AADT-CURRENT
 # DVMT - daily vehicle miles of travel
 # DTRKVMT - daily vehicle truck miles of travel
+# HWY, HNUM, HSYS, 
 
-travis_county <- txdot_roadway_opendata %>%
+travis_county1 <- txdot_roadway_opendata %>%
   filter(CO == 227) %>% 
-  select(RTE_GRID, GID, STE_NAM, CO, F_SYSTEM,
+  select(HWY, RTE_GRID, GID, STE_NAM, CO, F_SYSTEM,
          RU_F_SYSTEM, ADT_YEAR, ADT_CUR, DVMT, DTRKVMT)
 
-# just for fun, let's isolate IH_35
 
-test <- as.data.frame(unique(travis_county$STE_NAM))
+# api shapefile -----------------------------------------------------------
 
-write_csv(test, "data/test.csv")
+# I think this one is the best
+vmt_shape <- st_read("data/TxDOT_Roadway_Inventory/TxDOT_Roadway_Inventory_.shp")
 
-# hmm, seems like CO code filters our IH_35
-
-test <- txdot_roadway_opendata %>% 
-  filter(HSYS == "IH")
-
-
-
-
-
-
-
-
-
-
-
+atx_dist_vmt_geo <- vmt_shape %>% 
+  select(
+    # geo locations
+    DI, CO, CITY, MPA,
+    
+    #geo identifiers, i think
+    RTE_GRID, GID,
+    
+    # classifications
+    STE_NAM, HWY, F_SYSTEM, RU_F_SYSTE,
+    
+    # stats
+    ADT_YEAR, ADT_CUR, DVMT, DTRKVMT
+    ) %>% 
+  filter(DI == 14)
 
 
 
