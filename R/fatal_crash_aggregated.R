@@ -22,7 +22,7 @@ f.crsh_aggregate <- travis_grid %>%
 
 # save shapefile
 dir.create(path = "data/f.crsh_aggregate")
-st_write(f.crsh_aggregate, "f.crsh_aggregate.shp")
+st_write(f.crsh_aggregate, "data/f.crsh_aggregate.shp")
 
 
 # Map ---------------------------------------------------------------------
