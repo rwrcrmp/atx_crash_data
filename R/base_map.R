@@ -58,7 +58,7 @@ ggplot() +
   geom_sf(data = travis_grid, aes(fill = IH_35_hex)) +
   labs(title = "IH 35 through Travis County",
       subtitle = "Blue hexes intersect with IH 35 footprint",
-      caption = "sources: Travis County & City of Austin Open Data Portals") +
+      caption = "source: City of Austin") +
   scale_fill_manual(values = custom_palette) +
   theme_void() +
   theme(legend.position = "none")

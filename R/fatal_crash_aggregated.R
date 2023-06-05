@@ -23,3 +23,18 @@ f.crsh_aggregate <- travis_grid %>%
 # save shapefile
 dir.create(path = "data/f.crsh_aggregate")
 st_write(f.crsh_aggregate, "f.crsh_aggregate.shp")
+
+
+# Map ---------------------------------------------------------------------
+
+ggplot() +
+  geom_sf(data = f.crsh_aggregate,
+          color = "black",
+          aes(fill = crash_cnt)) +
+  labs(title = "Concentration of Fatal Crashes in Travis County",
+       subtitle = "2013-2023",
+       caption = "source: City of Austin") +
+  scale_fill_viridis_c("Fatal Crashes",
+                       option = "H") +
+  theme_void() +
+  theme(legend.position = "bottom")
