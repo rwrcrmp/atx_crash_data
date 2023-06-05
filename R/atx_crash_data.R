@@ -1,8 +1,8 @@
-# atx transportation: crash data query
-
 library(tidyverse)
+library(sf)
 library(RSocrata)
-library(lubridate)
+
+# Prelim setup ------------------------------------------------------------
 
 url <- "https://data.austintexas.gov/resource/y2wy-tgr5.json"
 
@@ -12,26 +12,28 @@ write_csv(atx_crash_raw, "data/atx_crash_raw.csv")
 
 atx_crash_raw <- read_csv("data/atx_crash_raw.csv")
 
-# take a look at rpt_street_name
-street_names <- levels(factor(atx_crash_raw$rpt_street_name))
+# Build Shapefile -------------------------------------------------------
 
-# "IH 35" is standard notation for highway
+atx_crash_pts <- atx_crash_raw %>% 
+  
+  # keep only death count greater than 0
+  filter(death_cnt != "0") %>% 
+  # select(crash_id, longitude, latitude) %>% 
+  
+  # add geometry as points
+  st_as_sf(coords = c("longitude", "latitude"),
+           
+           # conform CRS
+           crs = st_crs(travis_grid)) %>% 
+  filter(!is.na(geometry))
 
-IH35_reports <- atx_crash_raw %>% 
-  mutate(IH35 = if_else(str_detect(rpt_street_name, "IH 35"), T, F))
+# save shapefile to data folder
+dir.create(path = "data/atx_crash_pts")
+st_write(atx_crash_pts, "data/atx_crash_pts/atx_crash_pts.shp")
 
-IH35_reports %>% 
-  count(IH35 == T)
+# Map ---------------------------------------------------------------------
 
-atx_crash_coords <- atx_crash_raw %>% 
-  filter(crash_date >= "2018-01-01",
-         death_cnt != "0") %>% 
-  select(latitude, longitude) %>% 
-  drop_na()
-
-atx_crash_shp <- st_as_sf(atx_crash_coords, coords = c("longitude", "latitude"), crs = st_crs(travis_boundary))
-
-atx_crash_shp %>% 
+atx_crash_pts %>% 
   ggplot() +
   geom_sf(color = "firebrick", 
           size = 1,

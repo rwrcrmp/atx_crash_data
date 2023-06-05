@@ -1,8 +1,8 @@
 ## data info and links:
 
-Travis County bounday shapefile:
+Central Texas Counties bounday shapefile:
 
-https://tnr-traviscountytx.opendata.arcgis.com/datasets/TravisCountyTX::boundary/explore?location=30.324646%2C-97.770000%2C10.82
+https://data.austintexas.gov/dataset/Counties/9pr5-nzce
 
 Austin streets centerline shapefile:
 
@@ -19,5 +19,3 @@ https://www.txdot.gov/data-maps/roadway-inventory.html
 TXDOT roadway inventory API:
 
 https://gis-txdot.opendata.arcgis.com/datasets/TXDOT::txdot-roadway-inventory/explore
-
-
