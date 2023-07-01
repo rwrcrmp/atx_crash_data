@@ -1,8 +1,11 @@
-# atx_crash_data
-Repository for Austin crash data and related code focused on IH35 collision modeling.
+### Fatal Crashes in Austin, Texas
 
-![](images/f.crsh_aggregate.png "Crash Totals")
+This project builds towards the final deliverable of an interactive `leaflet` map:
+
+![](images/fatalities.png "Fatalities")
 
 ![](images/travis_hex.png "IH 35")
 
-![](images/fatalities.png "Fatalities")
+![](images/f.crsh_aggregate.png "Crash Totals")
+
+![](travis_crashes_hex.html "Leaflet Map")
