@@ -12,6 +12,10 @@ Austin crash data API link:
 
 https://data.austintexas.gov/resource/y2wy-tgr5.json
 
+TXDOT CRIS:
+
+https://www.txdot.gov/data-maps/crash-reports-records.html
+
 TXDOT roadway inventory:
 
 https://www.txdot.gov/data-maps/roadway-inventory.html

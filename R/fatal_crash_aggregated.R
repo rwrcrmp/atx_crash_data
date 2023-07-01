@@ -1,4 +1,9 @@
-# aggregate crashes by hex
+library(tidyverse)
+library(sf)
+library(mapview)
+
+
+# Aggregate crashes by hex ------------------------------------------------
 
 # spatial join to correlate pts to hex
 pts_to_hex <- st_join(atx_crash_pts, travis_grid)
@@ -30,7 +35,8 @@ st_write(f.crsh_aggregate, "data/f.crsh_aggregate.shp")
 ggplot() +
   geom_sf(data = f.crsh_aggregate,
           color = "black",
-          aes(fill = crash_cnt)) +
+          aes(fill = crash_cnt),
+          alpha = 1) +
   labs(title = "Concentration of Fatal Crashes in Travis County",
        subtitle = "2013-2023",
        caption = "source: City of Austin") +
@@ -38,3 +44,16 @@ ggplot() +
                        option = "H") +
   theme_void() +
   theme(legend.position = "bottom")
+
+mapview(f.crsh_aggregate,
+        zcol = "crash_cnt",
+        layer.name = "Fatal Crash #",
+        alpha.regions = 0.7)
+
+
+
+
+
+
+
+

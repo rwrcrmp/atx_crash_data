@@ -42,7 +42,6 @@ travis_grid <- travis_boundary %>%
       )
     )
 
-
 # save shapefile to data folder
 dir.create(path = "data/travis_grid")
 st_write(travis_grid, "data/travis_grid/travis_grid.shp")
