@@ -23,6 +23,8 @@ library(sf)
 library(leaflet)
 library(htmlwidgets)
 
+theme_set(theme_void())
+
 travis_grid <- st_read("data/f.crsh_aggregate/f.crsh_aggregate.shp")
 
 road_lines <- st_read("data/Street Centerline/geo_export_2da675db-b505-4e2b-bc1a-8e738b82806c.shp")
@@ -38,9 +40,9 @@ X_travis_boundary_X <- st_read("data/Boundary/Boundary.shp")
 
 ### Introduction & Background
 
-A major interstate cuts through the middle of downtown Austin, Texas. I-35 holds a potent historical significance for the city and radiates at the center of a current debate about its future. Impacts to the local community are substantial and multi-faceted, so any attempt to measure the highway’s effect on the surrounding population implies a choice of focus. In this blog, the dimension I examine is fatal vehicle collisions. This metric focuses attention because it’s more relatable than a distributed impact like pollution or economic development. After peaking during the pandemic, traffic deaths have marginally declined. The Department of Transportation estimates that [9,330 people died](https://crashstats.nhtsa.dot.gov/Api/Public/ViewPublication/813482) as a result of vehicle collisions in the first quarter of 2023. I intend to analyze other dimensions of community impact and perform some statistical work, but first I will simply count events in a defined area.
+A major interstate cuts through the middle of downtown Austin, Texas. IH-35 holds a potent historical significance for the City and radiates at the center of a current debate about its future. Impacts to the local community are substantial and multi-faceted, so any attempt to measure the highway’s effect on the surrounding population implies a selection among available topics. In this blog, the dimension I examine is fatal vehicle collisions. This metric focuses the attention because it’s more relatable than a distributed impact like pollution or economic development. After peaking during the pandemic, traffic deaths have marginally declined. The Department of Transportation estimates that [9,330 people died](https://crashstats.nhtsa.dot.gov/Api/Public/ViewPublication/813482) as a result of vehicle collisions in the first quarter of 2023. I intend to analyze other dimensions of community impact and perform some statistical work, but first I will simply count events in a defined area.
 
-The nature of transportation data means that I get the opportunity to refresh some GIS skills. Even after making many maps before, I gained some knowledge around troubleshooting GIS irregularities and got to practice design. It’s also important to keep in mind that transportation data is inherently behavioral information. Counting vehicle collisions is a measure of stationary incidents, but human travel happens over non-uniform spaces at different speeds and times. This idea will become more important later when build a statistical model, but for now we can just "flatten the world" and take a raw count. I’ve started initial research into distance-decay models and how to create one in R for myself. The deliverable for this current project phase is the interactive map below. I’m still learning `leaflet` and iterating on the final design.
+The nature of transportation data means that I get the opportunity to refresh some GIS skills. Even after making many maps in past projects, I gained new knowledge around troubleshooting GIS irregularities and got to practice design techniques. It’s important to keep in mind that transportation data is inherently behavioral information. Counting vehicle collisions is a measure of stationary incidents, but human travel happens over non-uniform spaces at different speeds and times. This idea will become more important later when building a statistical model, but for now we can just "flatten the world" and take a raw count. I’ve started initial research into distance-decay models and how to create one in R for myself. The deliverable for this current project phase is the interactive map below. I’m still learning `leaflet` and iterating on the final design.
 
 <center> __Fatal Crashes in Travis County : 2013-2023__ </center>
 ```{r leaflet demo, echo=FALSE}
@@ -83,6 +85,7 @@ The Texas Department of Transportation (TxDOT) hosts a repository of vehicle col
 
 <center> __Crash Points : 2013-2023__ </center>
 ```{r point map}
+# manipulate data and transform to geometry
 atx_crash_pts <- atx_crash_raw %>% 
   
   # keep only death count greater than 0
@@ -92,11 +95,13 @@ atx_crash_pts <- atx_crash_raw %>%
   st_as_sf(coords = c("longitude", "latitude"),
            
            # conform CRS to county map
+           # loaded earlier in hidden code chunk
            crs = st_crs(county_poly)) %>% 
   
   # remove rows without geometry
   filter(!is.na(geometry))
 
+# generate map
 atx_crash_pts %>% 
   ggplot() +
   geom_sf(color = "firebrick", 
@@ -106,30 +111,32 @@ atx_crash_pts %>%
   theme_minimal()
 ```
 
-Even lacking context, we can observe a spatial relationship and concentration of crashes in a meaningful pattern. Anyone familiar with Austin’s geography would instantly recognize the source of the vertical cluster as IH-35. Each crash report contains a variety of rich information, including a street name. The CoA data portal also contains [a shapefile of local roadways](https://data.austintexas.gov/dataset/Street-Centerline/8hf2-pdmb) stored as `linestrings`. Below are maps of all the local roadways and IH-35 isolated. We can generate a roadway map using the same technique, this time dropping lat-lon coordinates from the display. The easiest way I found to isolate IH-35 was to apply `dplyr::filter()` to the `prefix_typ` variable to extract the entries that contain "IH" (interstate highway).
+Even lacking context, we can observe a spatial relationship and concentration of crashes in a meaningful pattern. Anyone familiar with Austin geography would instantly recognize the source of the vertical cluster as IH-35. Each crash report contains a variety of rich information, including a street name. The CoA data portal also contains [a shapefile of local roadways](https://data.austintexas.gov/dataset/Street-Centerline/8hf2-pdmb) stored as `linestrings`. Below are maps of all the local roadways and IH-35 isolated. We can generate a roadway map using the same technique, this time dropping lat-lon coordinates from the display. The easiest way I found to isolate IH-35 was to apply `dplyr::filter()` to the `prefix_typ` variable to extract the entries that contain "IH" (interstate highway).
 
 <center> __Austin Roadways & IH-35 isloated__ </center>
 ```{r roadways, fig.show="hold"}
+# all roadways
 road_lines %>% 
   ggplot() +
-  geom_sf() + 
-  theme_void()
+  geom_sf()
 
+# just IH-35
 road_lines %>% 
   filter(prefix_typ == "IH") %>% 
   ggplot() +
-  geom_sf() + 
-  theme_void()
+  geom_sf()
 ```
 
-To estimate crash density around IH-35, I need to orient it in space by placing it within a boundary. If I were to compare crash density in and around the highway compared to the rest of the land mass of Texas, for instance, the scale between the two areas wouldn’t allow any kind of meaningful interpretation. I decided to use Travis County as my boundary because it contains all of Austin and it’s a familiar shape to local residents. I may consider a different shape in the future because a smaller version of the disproportionate scales is reproduced within Travis County. As a proof of concept, it works well enough. I decided to source this boundary from the [Travis County open data portal](https://tnr-traviscountytx.opendata.arcgis.com/datasets/TravisCountyTX::boundary/explore?location=30.324646%2C-97.770000%2C10.82) initially, then switched to a CoA source for reasons I'll explain below.
+To estimate crash density around IH-35, I need to orient it in space by placing it within a boundary. If I were to compare crash density in and around the highway compared to the rest of the land mass of Texas, for instance, the scale between the two areas wouldn’t allow any kind of meaningful interpretation. I decided to use Travis County as my boundary because it contains all of Austin and it’s a familiar shape to local residents. I may consider a different shape in the future because a smaller version of the disproportionate scale issue is reproduced within Travis County's large empty spaces. As a proof of concept, it works well enough. I originally sourced this boundary from the [Travis County open data portal](https://tnr-traviscountytx.opendata.arcgis.com/datasets/TravisCountyTX::boundary/explore?location=30.324646%2C-97.770000%2C10.82), then switched to a CoA source for reasons I'll explain below.
 
 <center> __Three layers; polygon, points, & lines__ </center>
 ```{r three layers}
+# isolate Travis County boundary polygon
 travis_boundary <- county_poly %>% 
   dplyr::filter(county_nam == "TRAVIS") %>% 
   select(county_nam, geometry)
 
+# isolate IH-35 roadway line
 IH_35 <- road_lines %>% 
   filter(prefix_typ == "IH")
 
@@ -142,25 +149,24 @@ IH_35 %>%
   geom_sf(data = atx_crash_pts,
           color = "firebrick", 
           size = 1,
-          show.legend = FALSE) +
-  theme_void()
+          show.legend = FALSE)
 ```
 
 The map above combines crash point data and a subset of the roadway lines by overlaying both on a polygon representing the Travis County. Again, the trend is obvious enough visually, but a layered image doesn't give us a programmic way of defining and measuring crash density on and around the highway. Apart from street name labels in the crash points data, we don't have a way to attribute crashes to a specific roadway.
 
 ### Spatial Correlation
 
-The empirical challenge at this stage concerns co-location. Orienting multiple objects in space allows us to infer something about their interaction by measuring their proximity. There are many different approaches to estimating spatial correlation, some of which I aim to explore in future stages. For now, I will keep it simple by abstracting the study area into a two dimensional plane without considering urban geography or specific human behavior. Another aspect of "flattening the world" is restricting and parceling space by imposing an geometric overlay. In the case of the interactive map above, that means looking only at Travis County and converting polygon representing its boundary into a hexagonal grid.
+The empirical challenge at this stage concerns co-location. Orienting multiple objects in space allows us to infer something about their interaction by measuring their proximity. There are many different approaches to estimating spatial correlation, some of which I aim to explore in future stages. For now, I will keep it simple by abstracting the study area into a two dimensional plane without considering urban geography or specific human behavior. Another aspect of "flattening the world" is restricting and parceling space by imposing a geometric overlay. In the case of the interactive map above, that means looking only at Travis County and converting polygon representing its boundary into a hexagonal grid.
 
-The Austin metro area is just as complex as any urban environment, and the road network profoundly affects how people move around. Vehicle trips may include multiple stops, long or short distances, or weird patterns like when you remember that you left the oven and returned home. Thankfully it was off, but you see a package you meant to take and add another stop at the post office. The road network causes people to move in ways that are more complicated than transitioning smoothly between hexagonal zones. So when looking at the interactive map, remember that it's flattening time and behavior for the sake of an artifice that bluntly measures spatial correlation.
+The Austin metro area is just as complex as any urban environment, and the road network profoundly affects how people move around. Vehicle trips may include multiple stops, long or short distances, or weird patterns like when you remember that you left the oven on and returned home. Thankfully it was off, but you see a package you meant to take and add another stop at the post office. The road network causes people to move in ways that are more complicated than transitioning smoothly between hexagonal zones. So when looking at the interactive map, remember that it's flattening time and behavior for the sake of an artifice that bluntly measures spatial correlation.
 
-Reducing complexity in spatial data makes co-location simpler, but it comes with trade offs. One upside is that it makes exploratory data analysis (EDA) much easier. With non-spatial data, EDA usually involves traditional charts like histograms and bar charts:
+Reducing complexity in spatial data does make co-location simpler, but it comes with trade offs. One upside is that it makes exploratory data analysis (EDA) much easier. With non-spatial data, EDA usually involves traditional charts like histograms and bar charts:
 
 <center> __Fatal Crashes by Year__ </center>
 ```{r column chart, echo=FALSE}
 atx_crash_pts %>% 
   
-  # data manipulation
+  # summarize crash data by year
   group_by(year = year(crash_date)) %>% 
   summarise(crash_counts = sum(n())) %>% 
   
@@ -168,24 +174,24 @@ atx_crash_pts %>%
   ggplot(aes(year, crash_counts)) +
     
     # map variables to geoms
-    geom_col(aes(fill = crash_counts)) +
+    geom_col(aes(fill = crash_counts, alpha = 0.7), ) +
     geom_label(aes(label = crash_counts, vjust = 1.2)) +
     
     # aesthetics
     scale_x_continuous(breaks = 2013:2023,
                        expand = c(0, 0.7)) +
     scale_y_continuous(expand = c(0, 1)) +
-    scale_fill_distiller(palette = "YlOrRd", guide = NULL) +
-    theme_void() +
+    scale_fill_viridis_c(option = 1, guide = NULL) +
     theme(axis.text.x = element_text(size = 13, vjust = 1),
-          plot.background = element_rect(fill = "lightgrey"))
+          plot.background = element_rect(fill = "lightgrey"),
+          legend.position = "none")
 ```
 
-In the same way we can group and measure crashes per year, we can produce counts per sub-regions within an area, provided there are sub-regions available that are discretely separated and labeled. Travis County contains many sub-regions groups such as Census tracts, City Council districts, and zip codes that provide simple labels to parcels of land. However, I want to split the Travis County polygon into even geometric parcels because it helps me measure distance more effectively than uneven administrative boundaries. Uniformly shaped hexagons also gives me a means to "pixelate" the study area into varying intensities. One other advantage of a hex-grid is that I can adjust sub-regions' size by changing the number of hexes in the grid. This way, I can tightly control the area around IH-35 with a shape that is cleanly transected by the roadway line.
+In the same way we can group and measure crashes per year, we can produce counts per sub-regions within an area, provided there are sub-regions available that are discretely separated and labeled. Travis County contains many sub-regions groups such as Census tracts, City Council districts, and zip codes that attach simple labels to parcels of land. However, I want to split the Travis County polygon into even geometric parcels because it helps me measure distance more effectively than uneven administrative boundaries. Uniformly shaped hexagons also gives me a means to "pixelate" the study area into varying intensities. One other advantage of a hex-grid is that I can adjust sub-regions' size by changing the number of hexes in the grid. This way, I can tightly control the area around IH-35 with a shape that is cleanly transected by the roadway line.
 
 I thought I would have to design a custom method for sub-dividing a polygon, but thanks to the `sf` package this can be accomplished easily with `st_make_grid`.
 
-<center> __Travis Grid__ </center>
+<center> __Travis County Grid__ </center>
 ```{r travis grid}
 travis_grid <- travis_boundary %>% 
   
@@ -197,15 +203,14 @@ travis_grid <- travis_boundary %>%
 
 travis_grid %>% 
   ggplot() +
-  geom_sf() +
-  theme_void()
+  geom_sf()
 ```
 
-My investigation into fatal crash data in Austin is at an exploratory stage, but is employing some tools that differ from typical EDA. In building an artifice to solve co-location, I made choiceS about the data environment. It's also a little deceiving because the project deliverable looks pretty. Familiar shapes and cartographic conventions presented with a data overlay can feel persuasive while eliding key facts or choices about how the data was assembled. All of which is to say _(breathes in...)_ I'm going out of my way to belabor the point that this is just one method of presenting raw counts of events in a static graphical format. Not yet a statistical inference.
+My investigation into fatal crash data in Austin is at an exploratory stage, but is employing some tools that differ from typical EDA. In building an artifice to solve co-location, I made choices about the data environment. It's also a little deceiving because the project deliverable looks pretty. Familiar shapes and cartographic conventions presented with a data overlay can feel persuasive while eliding key facts or choices about how the data was assembled. All of which is to say _(breathes in...)_ I'm going out of my way to belabor the point that this is just one method of presenting raw counts of events in a static graphical format. Not yet a statistical inference.
 
 ### GIS Troubleshooting
 
-EDA is useful both for getting a feel for your data through quick visualizations and for testing your assumptions. Since I retrieved my data from official sources, I didn't even consider non-overlapping geometries to be an assumption at first, but I guess that is illustrative of the sneaky nature of assumptions. Usually, when two geometries don't merge properly, its because their [coordinate reference systems (CRS)](https://en.wikipedia.org/wiki/Spatial_reference_system) are different. Misdirected by an assumption about CRSs, I got caught in a tailspin of troubleshooting in completely the wrong direction for nearly a week. If you've ever been lost in the fog of endlessly googling to refine the phrasing of a problem only to hit a succession of brick walls, you know that feeling of elation when you finally breakthrough and everything works.
+EDA is useful both for getting a feel for your data through quick visualizations and for testing your assumptions. Since I retrieved my data from official sources, I didn't even consider overlapping geometries to be an assumption at first, but I guess that is illustrative of the sneaky nature of assumptions. Usually, when two geometries don't merge properly, its because their [coordinate reference systems (CRS)](https://en.wikipedia.org/wiki/Spatial_reference_system) are different. Misdirected by an assumption about CRSs, I got caught in a tailspin of troubleshooting in completely the wrong direction for nearly a week. If you've ever been lost in the fog of endlessly googling to refine the phrasing of a problem only to hit a succession of brick walls, you know that feeling of elation when you finally breakthrough and everything works.
 
 To cut a long story short, I figured out (after many deep dives into documentation and tests of every parameter I could think of) that the shapefile pulled from Travis County had the wrong bounding box. Or rather, the coordinates were stored in an unconventional manner. Lat-lon coordinates are usually classified as decimals, but the Travis County data portal had them stored as integers, in a different order, and without negative longitude values.
 
@@ -219,9 +224,9 @@ The Travis County boundary data and City of Austin data merged without an error,
 
 ### Merging GIS Datasets
 
-To determine which hexes contain the IH-35 roadway, I will use `st_intersects` which performs as its name indicates. `st_intersects` combined with `if_else` gives me a way to construct a logical variable concerning IH-35's presence within a given hex.
+To determine which hexes contain the IH-35 roadway, I use `st_intersects` which performs as its name indicates. `st_intersects` combined with `if_else` gives me a way to construct a logical variable concerning IH-35's presence within a given hex.
 
-<center> __IH-35 Hexes in Turquoise__ </center>
+<center> __IH-35 Hexes in Pink__ </center>
 ```{r IH_35 hexes}
 # identify which hexes contain IH-35
 travis_grid <- travis_grid %>% 
@@ -240,20 +245,14 @@ travis_grid <- travis_grid %>%
         IH_35)) != "integer(0)", T, F)
     )
 
-custom_palette <- c("#d8b365", "#5ab4ac")
-
-# apply T/F to color palette
-names(custom_palette) <- levels(travis_grid$IH_35_hex)
-
 travis_grid %>% 
   ggplot() +
-    geom_sf(aes(fill = IH_35_hex)) +
-    scale_fill_manual(values = custom_palette) +
-    theme_void() +
+    geom_sf(aes(fill = IH_35_hex, alpha = 0.7)) +
+    scale_fill_manual(values = c("#d9d9d9", "#ff1693")) +
     theme(legend.position = "none")
 ```
 
-Although this hex classification isn't necessary to produce the end product for this stage, it points towards future analysis, and it's easy enough to include here. With the study area geometrically parceled, we can locate crash points within hexes, then group and count by hex.
+Although this hex classification isn't necessary to produce the end product for this stage, it points towards future analysis and hints at other applications opened up by the hexgrid. With the study area geometrically parceled, we can locate crash points within hexes, then group and count by hex.
 
 ```{r pts_to_hex}
 # spatial join to correlate pts to hex
@@ -285,16 +284,17 @@ Finally, now that we have all our data assembled, we can generate a standard cho
 
 <center> __Fatal Crashes in Travis County, 2013-2023__ </center>
 ```{r choropleth}
+
+
 f.crsh_aggregate %>% 
   ggplot() +
     geom_sf(aes(fill = crash_cnt),
             color = "black",
-            alpha = 1) +
+            alpha = 0.7) +
   
     # apply color scale, legend title
     scale_fill_viridis_c("Fatal Crashes",
-                         option = "H") +
-    theme_void() +
+                         option = "A") +
   
     # adjust legend settings
     theme(legend.position = "left",
@@ -349,12 +349,6 @@ f.crsh_aggregate %>%
 ```
 <center> [Click here for a full screen version](travis_crashes_hex.html) </center>
 </br>
-Thank you for reading and following along the development process. I will be coming back to make revisions and clean up some of my code. The Github repo is a bit of a mess right now because this project involved a lot of trial and error to get working properly. I know that the interactive maps generated in the blog don't exactly match the results of the full screen version that I generated in a separate script with the same code. I'll be rewriting most of this script anyhow in the next stages, so for now, I'm happy with this as a methodological foundation and proof of concept.
+Thank you for reading and following along the development process. The Github repo is a bit of a mess right now because this project involved a lot of trial and error to get working properly. I know that the interactive maps generated in the blog don't exactly match the results of the full screen version that I generated in a separate script with the same code. I'll be rewriting most of this script anyhow in the next stages, so for now, I'm happy with this as a methodological foundation and proof of concept.
 
-In the future, I want to explore other variables in the CoA data and pull in traffic statistics from TxDOT and possibly other administrative datasets. My next major goal is to design a [distance-decay model](http://wiki.gis.com/wiki/index.php/Distance_decay), then I want to see how I might incorporate it into a machine learning model. So, basically I need to do some reading. This inital stage was another great opportunity for me to practice GIS while incrementally improving my web publishing skills, and I am excited to keep learning.
-
-
-
-
-
-
+In the future, I want to explore other variables in the CoA data and pull in traffic statistics from TxDOT and possibly other administrative datasets. My next major goal is to design a [distance-decay model](http://wiki.gis.com/wiki/index.php/Distance_decay). I'm also thinking about how I might incorporate it into a machine learning model. This traffic data and the spending trend data from my previous blog are two distinct preprocessed datasets and interesting from a machine learning perspective in different ways. So, basically I have some reading to do.
